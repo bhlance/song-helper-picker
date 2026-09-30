@@ -1,6 +1,6 @@
 // Offline support: keep a copy of the app on the device.
 // Online: always try the network first so updates show up. Offline: fall back to the saved copy.
-const CACHE = 'helper-picker-v6';
+const CACHE = 'helper-picker-v7';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png'];
 
 self.addEventListener('install', e => {

@@ -229,6 +229,8 @@
   try { localStorage.setItem(KEY + '.probe', '1'); localStorage.removeItem(KEY + '.probe'); } catch (e) { storageOk = false; }
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
   const save = () => { S.savedAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storageOk = false; } };
+  // Alphabetical, case-insensitive; visitors always last.
+  const cmp = (a, b) => (S.visitors.includes(a) - S.visitors.includes(b)) || a.localeCompare(b, undefined, { sensitivity: 'base', numeric: true });
   const remaining = () => S.all.filter(n => !S.picked.includes(n));
 
   // ---------- audio ----------
@@ -273,18 +275,18 @@
 
   function refresh() {
     const left = remaining();
-    names = S.all.slice();
+    names = S.all.slice().sort(cmp);
     $('title').textContent = S.title;
     $('muteBtn').textContent = S.muted ? '🔇' : '🔊';
     $('visCount').textContent = S.visitors.length; $('cntDone').textContent = S.picked.length;
     const chip = n => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = (S.visitors.includes(n) ? '⭐ ' : '') + n; return b; };
     const done = $('cupDone'); done.innerHTML = '';
-    S.all.filter(n => S.picked.includes(n)).forEach(n => done.appendChild(chip(n)));
+    names.filter(n => S.picked.includes(n)).forEach(n => done.appendChild(chip(n)));
     const pk = $('pickChips'); pk.innerHTML = '';
-    S.all.forEach(n => { const b = chip(n); b.className = 'chip' + (S.picked.includes(n) ? ' done' : ''); b.style.cursor = 'pointer'; b.onclick = () => toggle(n); pk.appendChild(b); });
+    names.forEach(n => { const b = chip(n); b.className = 'chip' + (S.picked.includes(n) ? ' done' : ''); b.style.cursor = 'pointer'; b.onclick = () => toggle(n); pk.appendChild(b); });
     $('cntLeft').textContent = left.length;
     const adm = $('adminChips'); adm.innerHTML = '';
-    S.absent.forEach(n => adm.appendChild(chip(n)));
+    S.absent.slice().sort(cmp).forEach(n => adm.appendChild(chip(n)));
     if (!S.absent.length) adm.innerHTML = '<span class="note">No one is marked absent.</span>';
     $('cntAbsent').textContent = S.absent.length; $('reinsert').disabled = !S.absent.length;
     $('undo').disabled = spinning || !S.history.length;
@@ -417,11 +419,12 @@
   // ---------- editor ----------
   $('editBtn').onclick = () => {
     if (spinning) return;
-    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).join('\n'); $('edit').style.display = 'flex';
+    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).sort(cmp).join('\n'); $('edit').style.display = 'flex';
   };
   $('saveEdit').onclick = () => {
     const seen = new Set(), list = [];
-    $('namesIn').value.split('\n').map(s => s.trim()).filter(Boolean).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); list.push(n); } });
+    $('namesIn').value.split('\n').map(s => s.trim()).filter(Boolean).map(n => n === n.toLowerCase() ? n.replace(/(^|[\s'-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase()) : n).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); list.push(n); } });
+    list.sort(cmp);
     S.title = $('titleIn').value.trim() || "Who's Our Helper? 🎤";
     S.absent = S.absent.filter(n => list.includes(n));
     S.all = list.filter(n => !S.absent.includes(n)).concat(S.visitors.filter(v => !list.includes(v)));
