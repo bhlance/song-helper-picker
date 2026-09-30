@@ -211,6 +211,8 @@
     <div class="note">New names start in the wheel. Removing a name takes it out completely. Everyone else keeps their picked / not-picked status.</div>
   </div>
 
+  <div class="note" id="saveInfo"></div>
+
   <div class="btns"><button id="saveEdit">Save &amp; close</button></div>
 </div></div>
 
@@ -223,7 +225,10 @@
   // ---------- state ----------
   let S = { title: "Who's Our Helper? 🎤", all: SAMPLE.slice(), picked: [], history: [], last: null, muted: false, visitors: [], absent: [] };
   try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
-  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  let storageOk = true;
+  try { localStorage.setItem(KEY + '.probe', '1'); localStorage.removeItem(KEY + '.probe'); } catch (e) { storageOk = false; }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  const save = () => { S.savedAt = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { storageOk = false; } };
   const remaining = () => S.all.filter(n => !S.picked.includes(n));
 
   // ---------- audio ----------
@@ -412,7 +417,7 @@
   // ---------- editor ----------
   $('editBtn').onclick = () => {
     if (spinning) return;
-    $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).join('\n'); $('edit').style.display = 'flex';
+    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).join('\n'); $('edit').style.display = 'flex';
   };
   $('saveEdit').onclick = () => {
     const seen = new Set(), list = [];
@@ -448,6 +453,7 @@
 
   addEventListener('resize', draw);
   refresh();
+  if (!storageOk) toast('⚠️ This browser can’t save — names will reset when closed. Open the link in regular (non-private) Safari.');
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
   }
