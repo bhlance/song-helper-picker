@@ -378,7 +378,6 @@
   };
   $('newRound').onclick = () => {
     if (spinning) return;
-    if (!S.picked.length && !S.visitors.length && !S.absent.length) return;
     $('confirm').style.display = 'flex';
   };
   $('confirmNo').onclick = () => { $('confirm').style.display = 'none'; };
