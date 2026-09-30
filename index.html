@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Helper Picker">
+<title>Helper Picker</title>
+<style>
+  :root {
+    --bg1: #5b3df5; --bg2: #ff5fa2; --ink: #2b1d5c; --card: #fffdf7;
+    --gold: #ffc93c; --green: #35c97a; --shadow: 0 10px 30px rgba(43,29,92,.25);
+    --font: ui-rounded, "SF Pro Rounded", "Avenir Next Rounded", "Trebuchet MS", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    font-family: var(--font); color: var(--ink);
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    user-select: none; -webkit-user-select: none;
+  }
+  #app { height: 100%; height: 100dvh; display: flex; flex-direction: column; padding: 16px 20px; gap: 14px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #fff; }
+  h1 { margin: 0; font-size: clamp(26px, 4.5vw, 44px); letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0,0,0,.15); }
+  .iconbtns { display: flex; gap: 10px; }
+  .ib {
+    width: 52px; height: 52px; border-radius: 50%; border: 0; font-size: 24px; cursor: pointer;
+    background: rgba(255,255,255,.25); color: #fff; backdrop-filter: blur(6px);
+  }
+  .ib:active { transform: scale(.94); }
+
+  /* ---------- the reel ---------- */
+  #stage { position: relative; flex: 1; min-height: 240px; display: flex; align-items: stretch; }
+  #reel {
+    position: relative; flex: 1; overflow: hidden; border-radius: 28px;
+    background: var(--card); box-shadow: var(--shadow);
+    -webkit-mask-image: none;
+  }
+  #reel::before, #reel::after {
+    content: ""; position: absolute; left: 0; right: 0; height: 22%; z-index: 2; pointer-events: none;
+  }
+  #reel::before { top: 0;    background: linear-gradient(var(--card) 10%, rgba(255,253,247,0)); }
+  #reel::after  { bottom: 0; background: linear-gradient(rgba(255,253,247,0), var(--card) 90%); }
+  #band {
+    position: absolute; left: 0; right: 0; top: 50%; height: 29.4%; transform: translateY(-50%);
+    background: rgba(255,201,60,.35); border-top: 4px solid var(--gold); border-bottom: 4px solid var(--gold);
+    z-index: 1;
+  }
+  .arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: clamp(28px, 5vw, 54px); color: #e8445f; text-shadow: 0 2px 0 rgba(0,0,0,.12); }
+  .arrow.l { left: 14px; } .arrow.r { right: 14px; }
+  .row {
+    position: absolute; left: 0; right: 0; top: 0; text-align: center; font-weight: 800; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; padding: 0 70px; will-change: transform, opacity;
+  }
+  #msg {
+    position: absolute; inset: 0; z-index: 4; display: none; align-items: center; justify-content: center; text-align: center;
+    padding: 24px 70px; font-size: clamp(24px, 4vw, 40px); font-weight: 800; background: var(--card);
+  }
+
+  #spin {
+    align-self: center; border: 0; cursor: pointer; font-family: var(--font); font-weight: 900; color: #fff;
+    font-size: clamp(20px, 3vw, 30px); padding: 10px 44px; border-radius: 999px;
+    background: linear-gradient(#45e08c, var(--green)); box-shadow: 0 5px 0 #1f9a59, 0 10px 18px rgba(0,0,0,.25);
+    letter-spacing: 2px; text-shadow: 0 2px 0 rgba(0,0,0,.2);
+  }
+  #spin:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #1f9a59, 0 4px 8px rgba(0,0,0,.25); }
+  #spin:disabled { filter: grayscale(.6); opacity: .7; cursor: default; }
+
+  /* ---------- the two cups ---------- */
+  #cups { display: block; height: clamp(84px, 15vh, 150px); }
+  #cups .cup { height: 100%; }
+  .cup { background: rgba(255,255,255,.92); border-radius: 22px; padding: 10px 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: var(--shadow); }
+  .cup h2 { margin: 0 0 6px; font-size: clamp(14px, 2vw, 20px); display: flex; justify-content: space-between; }
+  .cup h2 span { background: var(--ink); color: #fff; border-radius: 999px; padding: 0 12px; min-width: 32px; text-align: center; }
+  .chips { flex: 1; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 6px; align-content: flex-start; -webkit-overflow-scrolling: touch; }
+  .chip { border: 0; font-family: var(--font); font-weight: 700; font-size: clamp(13px, 1.8vw, 18px); padding: 6px 14px; border-radius: 999px; background: #efe9ff; color: var(--ink); cursor: pointer; }
+  #cupDone .chip, .chip.done { background: #dff7ea; text-decoration: line-through; text-decoration-color: rgba(31,154,89,.6); }
+
+  .toolbar { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+  .tb { border: 0; font-family: var(--font); font-weight: 800; font-size: 16px; padding: 10px 20px; border-radius: 999px; background: rgba(255,255,255,.25); color: #fff; cursor: pointer; }
+  .tb:disabled { opacity: .4; }
+  .stepper { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; color: #fff; background: rgba(255,255,255,.25); border-radius: 999px; padding: 4px 8px 4px 18px; }
+  .stepper button { width: 40px; height: 40px; border-radius: 50%; border: 0; font-size: 24px; font-weight: 900; cursor: pointer; background: #fff; color: var(--ink); }
+  .stepper b { min-width: 22px; text-align: center; font-size: 22px; }
+
+  /* ---------- winner overlay ---------- */
+  #win {
+    position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(43,29,92,.78); backdrop-filter: blur(4px); text-align: center; padding: 24px;
+  }
+  #win .card { background: var(--card); border-radius: 36px; padding: clamp(24px, 5vw, 60px) clamp(28px, 7vw, 100px); box-shadow: var(--shadow); animation: pop .5s cubic-bezier(.2,1.6,.4,1); max-width: 94vw; }
+  #win .small { font-size: clamp(20px, 3vw, 34px); font-weight: 800; color: #e8445f; }
+  #win .name { font-size: clamp(56px, 13vw, 170px); font-weight: 900; line-height: 1.05; margin: 8px 0 18px; word-break: break-word; }
+  #win button { border: 0; font-family: var(--font); font-weight: 900; font-size: 26px; padding: 12px 40px; border-radius: 999px; background: var(--gold); color: var(--ink); cursor: pointer; }
+  #win #winAbsent { margin-top: 14px; font-size: 18px; padding: 8px 28px; background: #eee; font-weight: 800; }
+  @keyframes pop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+
+  /* ---------- editor ---------- */
+  #confirm { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center; background: rgba(43,29,92,.78); padding: 20px; }
+  #confirm .card { background: #fff; border-radius: 24px; padding: 26px; width: min(440px, 100%); text-align: center; }
+  #confirm h3 { margin: 0 0 6px; font-size: 26px; } #confirm p { margin: 0 0 18px; font-size: 18px; }
+  #confirm .btns { display: flex; gap: 10px; justify-content: center; }
+  #confirm .btns button { border: 0; font-family: var(--font); font-weight: 800; font-size: 18px; padding: 12px 24px; border-radius: 999px; cursor: pointer; }
+  #confirmYes { background: var(--green); color: #fff; } #confirmNo { background: #eee; }
+  #edit { position: fixed; inset: 0; z-index: 70; display: none; align-items: center; justify-content: center; background: rgba(43,29,92,.78); padding: 20px; }
+  #edit .card { background: #fff; border-radius: 24px; padding: 22px; width: min(560px, 100%); max-height: 92%; display: flex; flex-direction: column; gap: 10px; }
+  #edit h3 { margin: 0; font-size: 24px; }
+  #edit label { font-weight: 700; font-size: 14px; }
+  #edit input, #edit textarea { font-family: var(--font); font-size: 18px; border: 2px solid #d9d2f5; border-radius: 12px; padding: 10px; width: 100%; user-select: text; -webkit-user-select: text; }
+  #edit textarea { resize: none; }
+  #edit .btns { display: flex; gap: 10px; justify-content: flex-end; }
+  #edit .btns button { border: 0; font-family: var(--font); font-weight: 800; font-size: 17px; padding: 10px 22px; border-radius: 999px; cursor: pointer; }
+  #saveEdit { background: var(--green); color: #fff; }
+  #edit .sec { border-top: 2px solid #efe9ff; padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+  #edit .sec:first-of-type { border-top: 0; padding-top: 0; }
+  #edit .card { overflow-y: auto; }
+  #edit .stepper { color: var(--ink); background: #efe9ff; align-self: flex-start; }
+  #edit .stepper button { background: var(--ink); color: #fff; }
+  #edit .big { border: 0; font-family: var(--font); font-weight: 800; font-size: 17px; padding: 12px 22px; border-radius: 999px; background: #efe9ff; color: var(--ink); cursor: pointer; align-self: flex-start; }
+  #adminChips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
+  #edit textarea { min-height: 150px; }
+  .note { font-size: 13px; color: #6b5f94; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1 id="title">Who's Our Helper? 🎤</h1>
+    <div class="iconbtns">
+      <button class="ib" id="muteBtn" title="Sound on/off">🔊</button>
+      <button class="ib" id="editBtn" title="Admin">⚙️</button>
+    </div>
+  </header>
+
+  <div id="stage">
+    <div id="reel">
+      <div id="band"></div>
+      <div class="arrow l">▶</div><div class="arrow r">◀</div>
+      <div id="msg"></div>
+    </div>
+  </div>
+
+  <button id="spin">SPIN!</button>
+
+  <div class="toolbar">
+    <button class="tb" id="undo">↩ Undo last pick</button>
+  </div>
+
+  <div id="cups">
+    <div class="cup"><h2>Already picked <span id="cntDone">0</span></h2><div class="chips" id="cupDone"></div></div>
+  </div>
+</div>
+
+<div id="win"><div class="card"><div class="small">🎉 Our helper is…</div><div class="name" id="winName"></div><button id="winOk">Yay!</button><br><button id="winAbsent">Absent</button></div></div>
+<canvas id="confetti"></canvas>
+
+<div id="confirm"><div class="card">
+  <h3>Start a new round?</h3>
+  <p>This puts everyone back in the wheel, including absent kids, and clears any visitors.</p>
+  <div class="btns"><button id="confirmNo">Cancel</button><button id="confirmYes">Yes, start over</button></div>
+</div></div>
+
+<div id="edit"><div class="card">
+  <h3>⚙️ Admin</h3>
+
+  <div class="sec">
+    <label>Visitors today</label>
+    <div class="stepper">⭐ <button id="visMinus">−</button><b id="visCount">0</b><button id="visPlus">+</button></div>
+    <div class="note">Tap + to add “Visitor 1”, “Visitor 2”… to the wheel. Leave at 0 if there are none.</div>
+  </div>
+
+  <div class="sec">
+    <label>New class / start over</label>
+    <button class="big" id="newRound">🔄 Start new round</button>
+    <div class="note">Puts everyone back in the wheel, including absent kids, and clears visitors.</div>
+  </div>
+
+  <div class="sec">
+    <label>Absent kids <span class="note">(<span id="cntAbsent">0</span>)</span></label>
+    <div id="adminChips"></div>
+    <button class="big" id="reinsert">↩ Re-insert absent kids</button>
+    <div class="note">Puts absent kids back in the wheel (for example, if they show up late). A new round also brings them back.</div>
+  </div>
+
+  <div class="sec">
+    <label for="titleIn">Title</label>
+    <input id="titleIn" maxlength="40">
+    <label for="namesIn">Kids' names (one per line)</label>
+    <textarea id="namesIn" placeholder="One name per line"></textarea>
+    <div class="note">New names start in the wheel. Removing a name takes it out completely. Everyone else keeps their picked / not-picked status.</div>
+  </div>
+
+  <div class="btns"><button id="saveEdit">Save &amp; close</button></div>
+</div></div>
+
+<script>
+(function () {
+  const KEY = 'helperPicker.v1';
+  const $ = id => document.getElementById(id);
+  const SAMPLE = ['Emma','Noah','Olivia','Liam','Ava','Mason','Sophia','Lucas','Mia','Ethan','Lily','Jack'];
+
+  // ---------- state ----------
+  let S = { title: "Who's Our Helper? 🎤", all: SAMPLE.slice(), picked: [], history: [], last: null, muted: false, visitors: [], absent: [] };
+  try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  const remaining = () => S.all.filter(n => !S.picked.includes(n));
+
+  // ---------- audio ----------
+  let ac = null;
+  function audio() {
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+    if (ac && ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function tone(freq, dur, type, vol, when) {
+    const a = audio(); if (!a || S.muted) return;
+    const t = a.currentTime + (when || 0);
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(vol || .15, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  const tick = () => tone(900 + Math.random() * 120, .05, 'square', .05);
+  const fanfare = () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .28, 'triangle', .2, i * .13));
+
+  // ---------- reel ----------
+  const reel = $('reel'), ROWS = 9, rows = [];
+  for (let i = 0; i < ROWS; i++) { const d = document.createElement('div'); d.className = 'row'; reel.appendChild(d); rows.push(d); }
+  let pos = 0, spinning = false, names = [];
+
+  function draw() {
+    const n = names.length, h = reel.clientHeight, rh = h / 3.4, mid = h / 2;
+    const base = Math.floor(pos);
+    for (let k = 0; k < ROWS; k++) {
+      const i = base - 4 + k, d = i - pos, el = rows[k];
+      if (!n) { el.style.opacity = 0; continue; }
+      el.textContent = names[((i % n) + n) % n];
+      const a = Math.abs(d), sc = Math.max(.4, 1 - a * .28);
+      el.style.fontSize = (rh * .74) + 'px';
+      el.style.lineHeight = rh + 'px'; el.style.height = rh + 'px';
+      el.style.transform = `translateY(${mid + d * rh - rh / 2}px) scale(${sc})`;
+      el.style.opacity = Math.max(0, 1 - a * .42);
+      el.style.color = a < .5 ? '#2b1d5c' : '#7a6fa8';
+    }
+  }
+  const showMsg = t => { const m = $('msg'); if (t) { m.textContent = t; m.style.display = 'flex'; } else m.style.display = 'none'; };
+
+  function refresh() {
+    const left = remaining();
+    names = S.all.slice();
+    $('title').textContent = S.title;
+    $('muteBtn').textContent = S.muted ? '🔇' : '🔊';
+    $('visCount').textContent = S.visitors.length; $('cntDone').textContent = S.picked.length;
+    const chip = n => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = (S.visitors.includes(n) ? '⭐ ' : '') + n; return b; };
+    const done = $('cupDone'); done.innerHTML = '';
+    S.all.filter(n => S.picked.includes(n)).forEach(n => done.appendChild(chip(n)));
+    const adm = $('adminChips'); adm.innerHTML = '';
+    S.absent.forEach(n => adm.appendChild(chip(n)));
+    if (!S.absent.length) adm.innerHTML = '<span class="note">No one is marked absent.</span>';
+    $('cntAbsent').textContent = S.absent.length; $('reinsert').disabled = !S.absent.length;
+    $('undo').disabled = spinning || !S.history.length;
+    $('spin').disabled = spinning || !S.all.length;
+    if (!S.all.length) showMsg(S.absent.length ? 'Everyone is marked absent. Tap ⚙️ to re-insert them.' : 'Tap ⚙️ to add your kids’ names');
+    else if (!left.length) showMsg('🎉 Everyone has had a turn! Tap SPIN to start a new round.');
+    else showMsg('');
+    draw();
+  }
+
+  const ease = t => 1 - Math.pow(1 - t, 3.2);
+  function randInt(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
+
+  function spin() {
+    if (spinning || !S.all.length) return;
+    audio();
+    if (!remaining().length) { resetRound(true); }
+    let pool = remaining();
+    if (pool.length > 1 && S.last && S.picked.length === 0) pool = pool.filter(n => n !== S.last); // don't repeat across rounds
+    const winner = pool[randInt(pool.length)];
+    const n = names.length, target = names.indexOf(winner);
+    const cur = Math.round(pos);
+    const delta = ((target - cur) % n + n) % n;
+    const total = Math.ceil(55 / n) * n + delta;
+    const start = pos, dur = 5500, t0 = performance.now();
+    let lastRow = Math.round(start), lastTick = 0;
+    spinning = true; showMsg(''); refresh();
+    (function frame(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      pos = start + total * ease(t);
+      const r = Math.round(pos);
+      if (r !== lastRow) { lastRow = r; if (now - lastTick > 45) { tick(); lastTick = now; } }
+      draw();
+      if (t < 1) requestAnimationFrame(frame);
+      else { pos = start + total; spinning = false; land(winner); }
+    })(t0);
+  }
+
+  let lastWinner = null;
+  function land(winner) {
+    S.picked.push(winner); S.history.push(winner); S.last = winner; save(); refresh();
+    $('winName').textContent = winner; lastWinner = winner;
+    $('winAbsent').style.display = S.visitors.includes(winner) ? 'none' : 'inline-block';
+    $('win').style.display = 'flex';
+    fanfare(); confetti();
+  }
+
+  $('spin').onclick = spin;
+  $('winOk').onclick = () => { $('win').style.display = 'none'; stopConfetti(); refresh(); };
+  $('winAbsent').onclick = () => {
+    const n = lastWinner; if (!n) return;
+    S.picked = S.picked.filter(x => x !== n); S.history = S.history.filter(x => x !== n);
+    if (S.last === n) S.last = null;
+    S.all = S.all.filter(x => x !== n);
+    if (!S.absent.includes(n)) S.absent.push(n);
+    save(); pos = 0; $('win').style.display = 'none'; stopConfetti(); refresh();
+  };
+  $('reinsert').onclick = () => {
+    if (spinning || !S.absent.length) return;
+    S.all = S.all.concat(S.absent.filter(n => !S.all.includes(n))); S.absent = []; save(); refresh();
+  };
+  $('undo').onclick = () => {
+    const n = S.history.pop(); if (!n) return;
+    S.picked = S.picked.filter(x => x !== n); save(); refresh();
+  };
+  $('newRound').onclick = () => {
+    if (spinning) return;
+    if (!S.picked.length && !S.visitors.length && !S.absent.length) return;
+    $('confirm').style.display = 'flex';
+  };
+  $('confirmNo').onclick = () => { $('confirm').style.display = 'none'; };
+  $('confirmYes').onclick = () => { $('confirm').style.display = 'none'; resetRound(); refresh(); };
+  // Manual new round = fresh class: visitors clear and absent kids return. Automatic rollover (everyone's had a turn) keeps them.
+  function resetRound(keepVisitors) {
+    if (!keepVisitors) {
+      S.all = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent); S.visitors = []; S.absent = [];
+    }
+    S.picked = []; S.history = []; save();
+  }
+
+  // ---------- visitors ----------
+  function setVisitors(delta) {
+    if (spinning) return;
+    if (delta > 0 && S.visitors.length < 12) {
+      const name = 'Visitor ' + (S.visitors.length + 1);
+      S.all.push(name); S.visitors.push(name);
+    } else if (delta < 0 && S.visitors.length) {
+      const name = S.visitors.pop();
+      S.all = S.all.filter(n => n !== name); S.picked = S.picked.filter(n => n !== name); S.history = S.history.filter(n => n !== name);
+    } else return;
+    save(); refresh();
+  }
+  $('visPlus').onclick = () => setVisitors(1);
+  $('visMinus').onclick = () => setVisitors(-1);
+  $('muteBtn').onclick = () => { S.muted = !S.muted; save(); refresh(); };
+
+  // ---------- editor ----------
+  $('editBtn').onclick = () => {
+    if (spinning) return;
+    $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).join('\n'); $('edit').style.display = 'flex';
+  };
+  $('saveEdit').onclick = () => {
+    const seen = new Set(), list = [];
+    $('namesIn').value.split('\n').map(s => s.trim()).filter(Boolean).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); list.push(n); } });
+    S.title = $('titleIn').value.trim() || "Who's Our Helper? 🎤";
+    S.absent = S.absent.filter(n => list.includes(n));
+    S.all = list.filter(n => !S.absent.includes(n)).concat(S.visitors.filter(v => !list.includes(v)));
+    S.picked = S.picked.filter(n => S.all.includes(n));
+    S.history = S.history.filter(n => S.all.includes(n));
+    pos = 0; save(); $('edit').style.display = 'none'; refresh();
+  };
+
+  // ---------- confetti ----------
+  const cv = $('confetti'), cx = cv.getContext('2d'); let parts = [], raf = 0;
+  function confetti() {
+    cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio;
+    const cols = ['#ffc93c', '#ff5fa2', '#35c97a', '#5b3df5', '#45c8ff', '#ff8a3c'];
+    parts = Array.from({ length: 220 }, () => ({
+      x: cv.width / 2 + (Math.random() - .5) * cv.width * .3, y: cv.height * .45,
+      vx: (Math.random() - .5) * 22 * devicePixelRatio, vy: (-Math.random() * 20 - 6) * devicePixelRatio,
+      s: (6 + Math.random() * 9) * devicePixelRatio, c: cols[randInt(cols.length)], r: Math.random() * 6, vr: (Math.random() - .5) * .4
+    }));
+    cancelAnimationFrame(raf);
+    (function step() {
+      cx.clearRect(0, 0, cv.width, cv.height);
+      parts.forEach(p => { p.vy += .5 * devicePixelRatio; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+        cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cx.restore(); });
+      parts = parts.filter(p => p.y < cv.height + 40);
+      if (parts.length) raf = requestAnimationFrame(step); else cx.clearRect(0, 0, cv.width, cv.height);
+    })();
+  }
+  function stopConfetti() { cancelAnimationFrame(raf); parts = []; cx.clearRect(0, 0, cv.width, cv.height); }
+
+  addEventListener('resize', draw);
+  refresh();
+})();
+</script>
+</body>
+</html>
