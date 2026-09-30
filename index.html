@@ -6,6 +6,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Helper Picker">
 <title>Helper Picker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#5b3df5">
 <style>
   :root {
     --bg1: #5b3df5; --bg2: #ff5fa2; --ink: #2b1d5c; --card: #fffdf7;
@@ -413,6 +416,9 @@
 
   addEventListener('resize', draw);
   refresh();
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
 })();
 </script>
 </body>
