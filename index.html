@@ -120,6 +120,8 @@
   #edit .stepper { color: var(--ink); background: #efe9ff; align-self: flex-start; }
   #edit .stepper button { background: var(--ink); color: #fff; }
   #edit .big { border: 0; font-family: var(--font); font-weight: 800; font-size: 17px; padding: 12px 22px; border-radius: 999px; background: #efe9ff; color: var(--ink); cursor: pointer; align-self: flex-start; }
+  #pickChips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 170px; overflow-y: auto; }
+  #pickChips .chip.done { background: #dff7ea; text-decoration: line-through; text-decoration-color: rgba(31,154,89,.6); }
   #adminChips { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; }
   #edit textarea { min-height: 150px; }
   .note { font-size: 13px; color: #6b5f94; }
@@ -176,6 +178,12 @@
     <label>New class / start over</label>
     <button class="big" id="newRound">🔄 Start new round</button>
     <div class="note">Puts everyone back in the wheel, including absent kids, and clears visitors.</div>
+  </div>
+
+  <div class="sec">
+    <label>Already had a turn? <span class="note">(<span id="cntLeft">0</span> still to pick)</span></label>
+    <div id="pickChips"></div>
+    <div class="note">Tap a name to mark that kid as already picked (they're skipped until a new round). Tap again to put them back in the wheel.</div>
   </div>
 
   <div class="sec">
@@ -257,6 +265,9 @@
     const chip = n => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = (S.visitors.includes(n) ? '⭐ ' : '') + n; return b; };
     const done = $('cupDone'); done.innerHTML = '';
     S.all.filter(n => S.picked.includes(n)).forEach(n => done.appendChild(chip(n)));
+    const pk = $('pickChips'); pk.innerHTML = '';
+    S.all.forEach(n => { const b = chip(n); b.className = 'chip' + (S.picked.includes(n) ? ' done' : ''); b.style.cursor = 'pointer'; b.onclick = () => toggle(n); pk.appendChild(b); });
+    $('cntLeft').textContent = left.length;
     const adm = $('adminChips'); adm.innerHTML = '';
     S.absent.forEach(n => adm.appendChild(chip(n)));
     if (!S.absent.length) adm.innerHTML = '<span class="note">No one is marked absent.</span>';
@@ -267,6 +278,14 @@
     else if (!left.length) showMsg('🎉 Everyone has had a turn! Tap SPIN to start a new round.');
     else showMsg('');
     draw();
+  }
+
+  function toggle(n) {
+    if (spinning) return;
+    if (S.picked.includes(n)) S.picked = S.picked.filter(x => x !== n);
+    else S.picked.push(n);
+    S.history = S.history.filter(x => x !== n);
+    save(); refresh();
   }
 
   const ease = t => 1 - Math.pow(1 - t, 3.2);
