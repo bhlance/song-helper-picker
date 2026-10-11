@@ -100,6 +100,11 @@
   #win #winAbsent { margin-top: 14px; font-size: 18px; padding: 8px 28px; background: #eee; font-weight: 800; }
   @keyframes pop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   #confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+  #count { position: fixed; inset: 0; z-index: 55; display: none; align-items: center; justify-content: center; flex-direction: column; background: radial-gradient(circle at 50% 45%, rgba(91,61,245,.92), rgba(43,29,92,.96)); text-align: center; color: #fff; }
+  #count .small { font-size: clamp(24px, 4vw, 44px); font-weight: 800; color: var(--gold); text-shadow: 0 3px 0 rgba(0,0,0,.25); }
+  #count .num { font-size: clamp(140px, 36vw, 380px); font-weight: 900; line-height: 1; text-shadow: 0 8px 0 rgba(0,0,0,.25); animation: boom .7s ease-out; }
+  #count .tap { position: absolute; bottom: 4vh; font-size: 14px; opacity: .55; }
+  @keyframes boom { 0% { transform: scale(2.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
   /* ---------- editor ---------- */
   #confirm { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center; background: rgba(43,29,92,.78); padding: 20px; }
@@ -161,6 +166,7 @@
 </div>
 
 <div id="win"><div class="card"><div class="small">🎉 Our helper is…</div><div class="name" id="winName"></div><button id="winOk">Yay!</button><br><button id="winAbsent">Absent</button></div></div>
+<div id="count"><div class="small">Get ready…</div><div class="num" id="countNum"></div><div class="tap">tap to skip</div></div>
 <canvas id="confetti"></canvas>
 
 <div id="toast"></div>
@@ -204,6 +210,8 @@
   </div>
 
   <div class="sec">
+    <label><input type="checkbox" id="speakChk" style="width:auto"> 🗣️ Say the winner's name out loud</label>
+    <div class="note">The app announces the helper after the 3-2-1 countdown. Turn this off if you would rather it stay quiet. The 🔊 button at the top silences everything.</div>
     <label for="titleIn">Title</label>
     <input id="titleIn" maxlength="40">
     <label for="namesIn">Kids' names (one per line)</label>
@@ -257,9 +265,27 @@
     g.gain.setValueAtTime(vol || .15, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
     o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + .02);
   }
+  // short burst of noise (drums, whooshes, pops)
+  let nbuf = null, nbufCtx = null;
+  function noiseHit(when, vol, hp, dur) {
+    const a = audio(); if (!a || S.muted) return;
+    if (!nbuf || nbufCtx !== a) { nbuf = a.createBuffer(1, Math.floor(a.sampleRate * .3), a.sampleRate); const d = nbuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; nbufCtx = a; }
+    const t = a.currentTime + (when || 0), s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain(), L = dur || .05;
+    s.buffer = nbuf; f.type = 'highpass'; f.frequency.value = hp || 1500; g.gain.setValueAtTime(vol || .2, t); g.gain.exponentialRampToValueAtTime(.001, t + L);
+    s.connect(f); f.connect(g); g.connect(a.destination); s.start(t); s.stop(t + L + .02);
+  }
+  const drumroll = sec => { const n = Math.floor(sec / .055); for (let i = 0; i < n; i++) noiseHit(i * .055, .08 + .3 * (i / n), 1200, .045); };
+  const boom = when => { tone(120, .5, 'sine', .55, when); tone(60, .7, 'sine', .55, when); noiseHit(when, .35, 150, .25); };
   const tick = () => tone(900 + Math.random() * 120, .05, 'square', .05);
   const fanfare = () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .28, 'triangle', .2, i * .13));
 
+  // ---------- voice ----------
+  function unlockSpeech() { try { if ('speechSynthesis' in window) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } } catch (e) {} }   // iPhones only allow speech after a tap
+  function speak(text) {
+    if (S.muted || S.speak === false) return;
+    try { const ss = window.speechSynthesis; if (!ss) return; ss.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = .92; u.pitch = 1.15; u.volume = 1;
+      const vs = ss.getVoices(), v = vs.find(x => /^en[-_]US/i.test(x.lang) && /samantha|ava|allison|nicky|karen|siri|google us/i.test(x.name)) || vs.find(x => /^en/i.test(x.lang)); if (v) u.voice = v; ss.speak(u); } catch (e) {}
+  }
   // ---------- reel ----------
   const reel = $('reel'), ROWS = 9, rows = [];
   for (let i = 0; i < ROWS; i++) { const d = document.createElement('div'); d.className = 'row'; reel.appendChild(d); rows.push(d); }
@@ -298,8 +324,8 @@
     S.absent.slice().sort(cmp).forEach(n => adm.appendChild(chip(n)));
     if (!S.absent.length) adm.innerHTML = '<span class="note">No one is marked absent.</span>';
     $('cntAbsent').textContent = S.absent.length; $('reinsert').disabled = !S.absent.length;
-    $('undo').disabled = spinning || !S.history.length;
-    $('spin').disabled = spinning || !S.all.length;
+    $('undo').disabled = spinning || busy || !S.history.length;
+    $('spin').disabled = spinning || busy || !S.all.length;
     if (!S.all.length) showMsg(S.absent.length ? 'Everyone is marked absent. Tap ⚙️ to re-insert them.' : 'Tap ⚙️ to add your kids’ names');
     else if (!left.length) showMsg('🎉 Everyone has had a turn! Tap SPIN to start a new round.');
     else showMsg('');
@@ -340,9 +366,10 @@
   const ease = t => 1 - Math.pow(1 - t, 3.2);
   function randInt(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
 
+  let busy = false;
   function spin() {
-    if (spinning || !S.all.length) return;
-    audio();
+    if (spinning || busy || !S.all.length) return;
+    audio(); unlockSpeech();
     if (!remaining().length) { resetRound(true); }
     let pool = remaining();
     if (pool.length > 1 && S.last && S.picked.length === 0) pool = pool.filter(n => n !== S.last); // don't repeat across rounds
@@ -366,24 +393,37 @@
     })(t0);
   }
 
-  let lastWinner = null;
+  let lastWinner = null, cdTimers = [], lastStyle = '';
   function land(winner) {
     S.picked.push(winner); S.history.push(winner); S.last = winner; save(); refresh();
-    $('winName').textContent = winner; lastWinner = winner;
-    $('winAbsent').style.display = S.visitors.includes(winner) ? 'none' : 'inline-block';
-    $('win').style.display = 'flex';
-    fanfare(); confetti();
+    lastWinner = winner; $('winName').textContent = winner; $('winAbsent').style.display = S.visitors.includes(winner) ? 'none' : 'inline-block';
+    countdown(() => reveal(winner));
+  }
+  // 3... 2... 1... with a drum roll, then the big reveal (tap anywhere to skip the wait)
+  function countdown(done) {
+    busy = true; $('undo').disabled = true; $('spin').disabled = true;
+    const box = $('count'), num = $('countNum'); let finished = false;
+    const finish = () => { if (finished) return; finished = true; cdTimers.forEach(clearTimeout); cdTimers = []; box.style.display = 'none'; box.onclick = null; busy = false; done(); };
+    box.style.display = 'flex'; box.onclick = finish; drumroll(2.2);
+    [3, 2, 1].forEach((n, i) => cdTimers.push(setTimeout(() => { num.textContent = n; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = ''; tone(150 - i * 12, .22, 'sine', .4); }, i * 720)));
+    cdTimers.push(setTimeout(finish, 2200));
+  }
+  function reveal(winner) {
+    $('win').style.display = 'flex'; boom();
+    const styles = ['confetti', 'balloons', 'fireworks', 'stars'].filter(x => x !== lastStyle); lastStyle = styles[randInt(styles.length)];
+    celebrate(lastStyle); refresh();
+    setTimeout(() => speak('Our helper is… ' + winner + '!'), 450);
   }
 
   $('spin').onclick = spin;
-  $('winOk').onclick = () => { $('win').style.display = 'none'; stopConfetti(); refresh(); };
+  $('winOk').onclick = () => { $('win').style.display = 'none'; stopConfetti(); try { speechSynthesis.cancel(); } catch (e) {} refresh(); };
   $('winAbsent').onclick = () => {
     const n = lastWinner; if (!n) return;
     S.picked = S.picked.filter(x => x !== n); S.history = S.history.filter(x => x !== n);
     if (S.last === n) S.last = null;
     S.all = S.all.filter(x => x !== n);
     if (!S.absent.includes(n)) S.absent.push(n);
-    save(); pos = 0; $('win').style.display = 'none'; stopConfetti(); refresh();
+    save(); pos = 0; $('win').style.display = 'none'; stopConfetti(); try { speechSynthesis.cancel(); } catch (e) {} refresh();
   };
   $('reinsert').onclick = () => {
     if (spinning || !S.absent.length) return;
@@ -429,13 +469,13 @@
   // ---------- editor ----------
   $('editBtn').onclick = () => {
     if (spinning) return;
-    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).sort(cmp).join('\n'); $('edit').style.display = 'flex';
+    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('speakChk').checked = S.speak !== false; $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).sort(cmp).join('\n'); $('edit').style.display = 'flex';
   };
   $('saveEdit').onclick = () => {
     const seen = new Set(), list = [];
     $('namesIn').value.split('\n').map(s => s.trim()).filter(Boolean).map(n => n === n.toLowerCase() ? n.replace(/(^|[\s'-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase()) : n).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); list.push(n); } });
     list.sort(cmp);
-    S.title = $('titleIn').value.trim() || "Who's Our Helper? 🎤";
+    S.speak = $('speakChk').checked; S.title = $('titleIn').value.trim() || "Who's Our Helper? 🎤";
     S.absent = S.absent.filter(n => list.includes(n));
     S.all = list.filter(n => !S.absent.includes(n)).concat(S.visitors.filter(v => !list.includes(v)));
     S.picked = S.picked.filter(n => S.all.includes(n));
@@ -443,26 +483,48 @@
     pos = 0; save(); $('edit').style.display = 'none'; refresh();
   };
 
-  // ---------- confetti ----------
-  const cv = $('confetti'), cx = cv.getContext('2d'); let parts = [], raf = 0;
-  function confetti() {
-    cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio;
-    const cols = ['#ffc93c', '#ff5fa2', '#35c97a', '#5b3df5', '#45c8ff', '#ff8a3c'];
-    parts = Array.from({ length: 220 }, () => ({
-      x: cv.width / 2 + (Math.random() - .5) * cv.width * .3, y: cv.height * .45,
-      vx: (Math.random() - .5) * 22 * devicePixelRatio, vy: (-Math.random() * 20 - 6) * devicePixelRatio,
-      s: (6 + Math.random() * 9) * devicePixelRatio, c: cols[randInt(cols.length)], r: Math.random() * 6, vr: (Math.random() - .5) * .4
-    }));
+  // ---------- celebrations (a different one each time) ----------
+  const cv = $('confetti'), cx = cv.getContext('2d'); let parts = [], raf = 0, fwT = [], fwPending = 0;
+  const COLS = ['#ffc93c', '#ff5fa2', '#35c97a', '#5b3df5', '#45c8ff', '#ff8a3c'], rnd = () => Math.random();
+  function fwBurst(x, y, d) {
+    const col = COLS[randInt(COLS.length)];
+    for (let i = 0; i < 70; i++) { const a = rnd() * Math.PI * 2, sp = (2 + rnd() * 6) * d; parts.push({ k: 'f', x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 1, c: i % 5 === 0 ? '#fff' : col, s: (2 + rnd() * 3) * d }); }
+  }
+  function celebrate(style) {
+    const d = devicePixelRatio || 1; stopConfetti(); cv.width = innerWidth * d; cv.height = innerHeight * d;
+    if (style === 'confetti') {
+      fanfare();
+      parts = Array.from({ length: 220 }, () => ({ k: 'c', x: cv.width / 2 + (rnd() - .5) * cv.width * .3, y: cv.height * .45, vx: (rnd() - .5) * 22 * d, vy: (-rnd() * 20 - 6) * d, s: (6 + rnd() * 9) * d, c: COLS[randInt(COLS.length)], r: rnd() * 6, vr: (rnd() - .5) * .4 }));
+    } else if (style === 'balloons') {
+      [392, 494, 587, 784].forEach((f, i) => tone(f, .25, 'triangle', .18, i * .12));
+      for (let i = 0; i < 14; i++) { const t = .5 + rnd() * 2.4; noiseHit(t, .22, 900, .05); tone(500 + rnd() * 500, .07, 'sine', .12, t); }
+      parts = Array.from({ length: 24 }, () => ({ k: 'b', x: rnd() * cv.width, y: cv.height + rnd() * cv.height * .7, vy: -(2 + rnd() * 2.6) * d, ph: rnd() * 6, r: (28 + rnd() * 22) * d, c: COLS[randInt(COLS.length)] }));
+    } else if (style === 'stars') {
+      [1047, 1175, 1319, 1568, 1760, 2093, 1760, 1568, 1319, 1175, 1568, 2093].forEach((f, i) => tone(f, .4, 'sine', .11, i * .12));
+      parts = Array.from({ length: 70 }, () => ({ k: 's', x: rnd() * cv.width, y: -rnd() * cv.height * .9, vx: (rnd() - .5) * 2 * d, vy: (2 + rnd() * 4) * d, r: rnd() * 6, vr: (rnd() - .5) * .2, s: (24 + rnd() * 30) * d, e: ['⭐', '🌟', '✨'][randInt(3)] }));
+    } else {
+      parts = []; fwPending = 5;
+      for (let i = 0; i < 5; i++) { const at = i * .55;
+        noiseHit(at, .18, 3500, .3); tone(300, .3, 'sine', .08, at); boom(at + .35);
+        fwT.push(setTimeout(() => { fwPending--; fwBurst(cv.width * (.15 + rnd() * .7), cv.height * (.15 + rnd() * .4), d); }, (at + .35) * 1000)); }
+    }
     cancelAnimationFrame(raf);
     (function step() {
       cx.clearRect(0, 0, cv.width, cv.height);
-      parts.forEach(p => { p.vy += .5 * devicePixelRatio; p.x += p.vx; p.y += p.vy; p.r += p.vr;
-        cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cx.restore(); });
-      parts = parts.filter(p => p.y < cv.height + 40);
-      if (parts.length) raf = requestAnimationFrame(step); else cx.clearRect(0, 0, cv.width, cv.height);
+      parts.forEach(p => {
+        if (p.k === 'c') { p.vy += .5 * d; p.x += p.vx; p.y += p.vy; p.r += p.vr; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cx.restore(); }
+        else if (p.k === 'b') { p.y += p.vy; p.ph += .04; const x = p.x + Math.sin(p.ph) * 18 * d;
+          cx.strokeStyle = 'rgba(255,255,255,.7)'; cx.lineWidth = 2 * d; cx.beginPath(); cx.moveTo(x, p.y + p.r * 1.25); cx.quadraticCurveTo(x + 8 * d, p.y + p.r * 2, x, p.y + p.r * 2.6); cx.stroke();
+          cx.fillStyle = p.c; cx.beginPath(); cx.ellipse(x, p.y, p.r * .8, p.r, 0, 0, Math.PI * 2); cx.fill();
+          cx.fillStyle = 'rgba(255,255,255,.45)'; cx.beginPath(); cx.ellipse(x - p.r * .3, p.y - p.r * .35, p.r * .18, p.r * .3, -.5, 0, Math.PI * 2); cx.fill(); }
+        else if (p.k === 's') { p.x += p.vx; p.y += p.vy; p.r += p.vr; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.font = p.s + 'px serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(p.e, 0, 0); cx.restore(); }
+        else { p.vy += .08 * d; p.x += p.vx; p.y += p.vy; p.vx *= .985; p.life -= .014; cx.globalAlpha = Math.max(0, p.life); cx.fillStyle = p.c; cx.beginPath(); cx.arc(p.x, p.y, p.s, 0, Math.PI * 2); cx.fill(); cx.globalAlpha = 1; }
+      });
+      parts = parts.filter(p => p.k === 'b' ? p.y > -p.r * 3 : p.k === 'f' ? p.life > 0 : p.y < cv.height + 60);
+      if (parts.length || fwPending > 0) raf = requestAnimationFrame(step); else cx.clearRect(0, 0, cv.width, cv.height);
     })();
   }
-  function stopConfetti() { cancelAnimationFrame(raf); parts = []; cx.clearRect(0, 0, cv.width, cv.height); }
+  function stopConfetti() { cancelAnimationFrame(raf); fwT.forEach(clearTimeout); fwT = []; fwPending = 0; parts = []; cx.clearRect(0, 0, cv.width, cv.height); }
 
   addEventListener('resize', draw);
   refresh();
