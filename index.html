@@ -236,10 +236,19 @@
   // ---------- audio ----------
   let ac = null;
   function audio() {
-    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-    if (ac && ac.state === 'suspended') ac.resume();
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}   // iPhone: play even with the side silent switch on
+    if (!ac || ac.state === 'closed') { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } }
+    if (ac && ac.state !== 'running') { try { ac.resume(); } catch (e) {} }   // iOS can leave it "interrupted", not just "suspended"
     return ac;
   }
+  // iPhones/iPads pause the sound engine when the screen locks, you switch apps, or a call comes in. Wake it on every tap.
+  function wake() {
+    const a = audio(); if (!a) return;
+    try { const s = a.createBufferSource(); s.buffer = a.createBuffer(1, 1, 22050); s.connect(a.destination); s.start(0); } catch (e) {}
+    setTimeout(() => { if (ac && ac.state !== 'running') { try { ac.close(); } catch (e) {} ac = null; audio(); } }, 400);   // still stuck? start a fresh sound engine
+  }
+  ['pointerdown', 'touchstart', 'keydown'].forEach(ev => document.addEventListener(ev, wake, { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && ac && ac.state !== 'running') { try { ac.resume(); } catch (e) {} } });
   function tone(freq, dur, type, vol, when) {
     const a = audio(); if (!a || S.muted) return;
     const t = a.currentTime + (when || 0);
@@ -345,6 +354,7 @@
     const start = pos, dur = 5500, t0 = performance.now();
     let lastRow = Math.round(start), lastTick = 0;
     spinning = true; showMsg(''); refresh();
+    setTimeout(() => { if (!S.muted && ac && ac.state !== 'running') toast('🔇 No sound. Turn up the volume and switch off the silent switch on the side, then tap SPIN again.'); }, 800);
     (function frame(now) {
       const t = Math.min(1, (now - t0) / dur);
       pos = start + total * ease(t);
@@ -414,7 +424,7 @@
   }
   $('visPlus').onclick = () => setVisitors(1);
   $('visMinus').onclick = () => setVisitors(-1);
-  $('muteBtn').onclick = () => { S.muted = !S.muted; save(); refresh(); };
+  $('muteBtn').onclick = () => { S.muted = !S.muted; save(); refresh(); if (!S.muted) { tone(660, .12, 'triangle', .2); tone(880, .18, 'triangle', .2, .12); } };   // a little beep so you can hear that sound is on
 
   // ---------- editor ----------
   $('editBtn').onclick = () => {
