@@ -24,8 +24,8 @@
     user-select: none; -webkit-user-select: none;
   }
   #fx { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
-  #fx span { position: absolute; top: -60px; opacity: .85; animation: fall linear infinite; will-change: transform; }
-  @keyframes fall { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(115vh) rotate(300deg); } }
+  #fx span { position: absolute; top: -170px; opacity: .85; animation: fall linear infinite; will-change: transform; }
+  @keyframes fall { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(125vh) rotate(300deg); } }
   #app { position: relative; z-index: 1; height: 100%; height: 100dvh; display: flex; flex-direction: column; padding: 16px 20px; gap: 14px; }
 
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #fff; }
@@ -343,7 +343,7 @@
     const fx = $('fx'); fx.innerHTML = ''; if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     t.fx.length && Array.from({ length: 16 }, (_, i) => {
       const s = document.createElement('span'); s.textContent = t.fx[i % t.fx.length];
-      s.style.cssText = 'left:' + (Math.random() * 96) + '%;font-size:' + (22 + Math.random() * 30) + 'px;animation-duration:' + (11 + Math.random() * 12) + 's;animation-delay:-' + (Math.random() * 22) + 's';
+      s.style.cssText = 'left:' + (Math.random() * 92) + '%;font-size:' + (66 + Math.random() * 90) + 'px;animation-duration:' + (11 + Math.random() * 12) + 's;animation-delay:-' + (Math.random() * 22) + 's';
       fx.appendChild(s); });
   }
   const sel = $('themeSel'); sel.innerHTML = '<option value="auto">🗓️ Automatic (by the date)</option>' + ['newyear', 'winter', 'valentines', 'stpatricks', 'spring', 'easter', 'summer', 'patriotic', 'fall', 'halloween', 'thanksgiving', 'christmas', 'original'].map(k => '<option value="' + k + '">' + THEMES[k].name + '</option>').join('');
