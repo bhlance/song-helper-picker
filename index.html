@@ -23,7 +23,10 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     user-select: none; -webkit-user-select: none;
   }
-  #app { height: 100%; height: 100dvh; display: flex; flex-direction: column; padding: 16px 20px; gap: 14px; }
+  #fx { position: fixed; inset: 0; overflow: hidden; pointer-events: none; z-index: 0; }
+  #fx span { position: absolute; top: -60px; opacity: .85; animation: fall linear infinite; will-change: transform; }
+  @keyframes fall { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(115vh) rotate(300deg); } }
+  #app { position: relative; z-index: 1; height: 100%; height: 100dvh; display: flex; flex-direction: column; padding: 16px 20px; gap: 14px; }
 
   header { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #fff; }
   h1 { margin: 0; font-size: clamp(26px, 4.5vw, 44px); letter-spacing: .5px; text-shadow: 0 3px 0 rgba(0,0,0,.15); }
@@ -33,6 +36,7 @@
     background: rgba(255,255,255,.25); color: #fff; backdrop-filter: blur(6px);
   }
   .ib:active { transform: scale(.94); }
+  .ib:disabled { opacity: .35; cursor: default; }
 
   /* ---------- the reel ---------- */
   #stage { position: relative; flex: 1; min-height: 240px; display: flex; align-items: stretch; }
@@ -62,14 +66,20 @@
     padding: 24px 70px; font-size: clamp(24px, 4vw, 40px); font-weight: 800; background: var(--card);
   }
 
+  #spinWrap { flex: 0 0 auto; display: flex; justify-content: center; align-items: center; height: clamp(120px, 25vh, 250px); }
   #spin {
-    align-self: center; border: 0; cursor: pointer; font-family: var(--font); font-weight: 900; color: #fff;
-    font-size: clamp(20px, 3vw, 30px); padding: 10px 44px; border-radius: 999px;
-    background: linear-gradient(#45e08c, var(--green)); box-shadow: 0 5px 0 #1f9a59, 0 10px 18px rgba(0,0,0,.25);
-    letter-spacing: 2px; text-shadow: 0 2px 0 rgba(0,0,0,.2);
+    height: 100%; aspect-ratio: 1 / 1; border-radius: 50%; border: 0; cursor: pointer; font-family: var(--font); font-weight: 900; color: #fff;
+    font-size: clamp(30px, 6.5vh, 66px); letter-spacing: 2px; text-shadow: 0 3px 0 rgba(0,0,0,.25); padding: 0;
+    background: radial-gradient(circle at 35% 28%, #8dffbd, #45e08c 38%, var(--green) 75%);
+    box-shadow: 0 8px 0 #1f9a59, 0 14px 24px rgba(0,0,0,.3), inset 0 -6px 12px rgba(0,0,0,.12), inset 0 6px 12px rgba(255,255,255,.35);
   }
-  #spin:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 #1f9a59, 0 4px 8px rgba(0,0,0,.25); }
-  #spin:disabled { filter: grayscale(.6); opacity: .7; cursor: default; }
+  #spin:active:not(:disabled) { transform: translateY(6px); box-shadow: 0 2px 0 #1f9a59, 0 6px 12px rgba(0,0,0,.25), inset 0 6px 12px rgba(255,255,255,.35); animation: none; }
+  #spin:disabled { filter: grayscale(.55); opacity: .75; cursor: default; }
+  /* flashes while it is waiting to be pushed */
+  @keyframes flash { 0%, 100% { transform: scale(1); filter: brightness(1); } 50% { transform: scale(1.08); filter: brightness(1.25) saturate(1.2); } }
+  @keyframes glow { 0%, 100% { box-shadow: 0 8px 0 #1f9a59, 0 14px 24px rgba(0,0,0,.3), 0 0 0 0 rgba(255,255,160,.0), inset 0 6px 12px rgba(255,255,255,.35); } 50% { box-shadow: 0 8px 0 #1f9a59, 0 14px 24px rgba(0,0,0,.3), 0 0 0 18px rgba(255,255,160,.45), inset 0 6px 12px rgba(255,255,255,.35); } }
+  #spin.flash:not(:disabled) { animation: flash 1s ease-in-out infinite, glow 1s ease-in-out infinite; }
+  @media (prefers-reduced-motion: reduce) { #spin.flash:not(:disabled) { animation: none; } }
 
   /* ---------- the two cups ---------- */
   #cups { display: block; height: clamp(84px, 15vh, 150px); }
@@ -81,7 +91,6 @@
   .chip { border: 0; font-family: var(--font); font-weight: 700; font-size: clamp(13px, 1.8vw, 18px); padding: 6px 14px; border-radius: 999px; background: #efe9ff; color: var(--ink); cursor: pointer; }
   #cupDone .chip, .chip.done { background: #dff7ea; text-decoration: line-through; text-decoration-color: rgba(31,154,89,.6); }
 
-  .toolbar { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
   .tb { border: 0; font-family: var(--font); font-weight: 800; font-size: 16px; padding: 10px 20px; border-radius: 999px; background: rgba(255,255,255,.25); color: #fff; cursor: pointer; }
   .tb:disabled { opacity: .4; }
   .stepper { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 16px; color: #fff; background: rgba(255,255,255,.25); border-radius: 999px; padding: 4px 8px 4px 18px; }
@@ -95,16 +104,12 @@
   }
   #win .card { background: var(--card); border-radius: 36px; padding: clamp(24px, 5vw, 60px) clamp(28px, 7vw, 100px); box-shadow: var(--shadow); animation: pop .5s cubic-bezier(.2,1.6,.4,1); max-width: 94vw; }
   #win .small { font-size: clamp(20px, 3vw, 34px); font-weight: 800; color: #e8445f; }
+  #win .name .emo { font-size: .7em; }
   #win .name { font-size: clamp(56px, 13vw, 170px); font-weight: 900; line-height: 1.05; margin: 8px 0 18px; word-break: break-word; }
   #win button { border: 0; font-family: var(--font); font-weight: 900; font-size: 26px; padding: 12px 40px; border-radius: 999px; background: var(--gold); color: var(--ink); cursor: pointer; }
   #win #winAbsent { margin-top: 14px; font-size: 18px; padding: 8px 28px; background: #eee; font-weight: 800; }
   @keyframes pop { from { transform: scale(.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   #confetti { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
-  #count { position: fixed; inset: 0; z-index: 55; display: none; align-items: center; justify-content: center; flex-direction: column; background: radial-gradient(circle at 50% 45%, rgba(91,61,245,.92), rgba(43,29,92,.96)); text-align: center; color: #fff; }
-  #count .small { font-size: clamp(24px, 4vw, 44px); font-weight: 800; color: var(--gold); text-shadow: 0 3px 0 rgba(0,0,0,.25); }
-  #count .num { font-size: clamp(140px, 36vw, 380px); font-weight: 900; line-height: 1; text-shadow: 0 8px 0 rgba(0,0,0,.25); animation: boom .7s ease-out; }
-  #count .tap { position: absolute; bottom: 4vh; font-size: 14px; opacity: .55; }
-  @keyframes boom { 0% { transform: scale(2.4); opacity: 0; } 30% { opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
   /* ---------- editor ---------- */
   #confirm { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center; background: rgba(43,29,92,.78); padding: 20px; }
@@ -137,10 +142,12 @@
 </style>
 </head>
 <body>
+<div id="fx"></div>
 <div id="app">
   <header>
     <h1 id="title">Who's Our Helper? 🎤</h1>
     <div class="iconbtns">
+      <button class="ib" id="undo" title="Undo last pick">↩</button>
       <button class="ib" id="muteBtn" title="Sound on/off">🔊</button>
       <button class="ib" id="editBtn" title="Admin">⚙️</button>
     </div>
@@ -154,11 +161,7 @@
     </div>
   </div>
 
-  <button id="spin">SPIN!</button>
-
-  <div class="toolbar">
-    <button class="tb" id="undo">↩ Undo last pick</button>
-  </div>
+  <div id="spinWrap"><button id="spin" class="flash">SPIN!</button></div>
 
   <div id="cups">
     <div class="cup"><h2>Already picked <span id="cntDone">0</span></h2><div class="chips" id="cupDone"></div></div>
@@ -166,7 +169,6 @@
 </div>
 
 <div id="win"><div class="card"><div class="small">🎉 Our helper is…</div><div class="name" id="winName"></div><button id="winOk">Yay!</button><br><button id="winAbsent">Absent</button></div></div>
-<div id="count"><div class="small">Get ready…</div><div class="num" id="countNum"></div><div class="tap">tap to skip</div></div>
 <canvas id="confetti"></canvas>
 
 <div id="toast"></div>
@@ -211,11 +213,16 @@
 
   <div class="sec">
     <label><input type="checkbox" id="speakChk" style="width:auto"> 🗣️ Say the winner's name out loud</label>
-    <div class="note">The app announces the helper after the 3-2-1 countdown. Turn this off if you would rather it stay quiet. The 🔊 button at the top silences everything.</div>
+    <div class="note">The app announces the helper after the drum roll. Turn this off if you would rather it stay quiet. The 🔊 button at the top silences everything.</div>
+    <label for="themeSel">🎨 Look</label>
+    <select id="themeSel" style="font-family:var(--font);font-size:18px;border:2px solid #d9d2f5;border-radius:12px;padding:10px;width:100%"></select>
+    <div class="note">“Automatic” changes the colors and the falling pictures with the season and holidays. Pick one to keep it all the time.</div>
     <label for="titleIn">Title</label>
     <input id="titleIn" maxlength="40">
     <label for="namesIn">Kids' names (one per line)</label>
     <textarea id="namesIn" placeholder="One name per line"></textarea>
+    <button class="big" id="newEmojis">🔀 Give everyone new emojis</button>
+    <div class="note">Each kid gets an emoji, shown on both sides of the name. To pick your own, type an emoji after the name in the list (like “Emma 🦊”).</div>
     <div class="note">New names start in the wheel. Removing a name takes it out completely. Everyone else keeps their picked / not-picked status.</div>
   </div>
 
@@ -286,6 +293,57 @@
     try { const ss = window.speechSynthesis; if (!ss) return; ss.cancel(); const u = new SpeechSynthesisUtterance(text); u.rate = .92; u.pitch = 1.15; u.volume = 1;
       const vs = ss.getVoices(), v = vs.find(x => /^en[-_]US/i.test(x.lang) && /samantha|ava|allison|nicky|karen|siri|google us/i.test(x.name)) || vs.find(x => /^en/i.test(x.lang)); if (v) u.voice = v; ss.speak(u); } catch (e) {}
   }
+  // ---------- emoji next to each name ----------
+  const EMOJIS = ['🐶','🐱','🦊','🐻','🐼','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🐔','🐧','🐦','🦄','🐝','🦋','🐢','🐙','🐬','🐳','🦖','🐘','🦒','🦓','🐰','🐹','🦉','🐞','🍎','🍓','🍉','🍕','🍩','🍪','🍦','🌈','🚀','⚽','🎈','🎨','🎸','🚲','🌻','🍀','🌟','🎠'];
+  if (!S.emo || typeof S.emo !== 'object') S.emo = {};
+  function emo(n) {
+    if (S.visitors.includes(n)) return '⭐';
+    if (!S.emo[n]) { const used = new Set(Object.values(S.emo)), pool = EMOJIS.filter(e => !used.has(e)), p = pool.length ? pool : EMOJIS; S.emo[n] = p[randInt(p.length)]; save(); }
+    return S.emo[n];
+  }
+  const disp = n => { const e = emo(n); return e + ' ' + n + ' ' + e; };
+  // ---------- seasonal looks ----------
+  const THEMES = {
+    original:     { name: 'Original (purple and pink)', c1: '#5b3df5', c2: '#ff5fa2', fx: [] },
+    fall:         { name: '🍂 Fall',                    c1: '#c2410c', c2: '#f59f0b', fx: ['🍂', '🍁', '🍃', '🌰'] },
+    halloween:    { name: '🎃 Halloween',               c1: '#3b1d6e', c2: '#ff7a00', fx: ['🎃', '👻', '🦇', '🍬', '🕸️'] },
+    thanksgiving: { name: '🦃 Thanksgiving',            c1: '#7c3f12', c2: '#d9822b', fx: ['🦃', '🥧', '🌽', '🍂'] },
+    christmas:    { name: '🎄 Christmas',               c1: '#b3122e', c2: '#0f7a3d', fx: ['🎄', '⛄', '❄️', '⭐', '🎁'] },
+    winter:       { name: '❄️ Winter',                  c1: '#2b5fb0', c2: '#7cc0f0', fx: ['❄️', '⛄', '🧣', '❄️'] },
+    valentines:   { name: '💖 Valentine’s Day',         c1: '#d81b60', c2: '#ff8fb1', fx: ['❤️', '💖', '💝', '💌'] },
+    spring:       { name: '🌷 Spring',                  c1: '#2f9e44', c2: '#ffd43b', fx: ['🌸', '🌷', '🦋', '🐝', '🌼'] },
+    easter:       { name: '🐣 Easter',                  c1: '#8e6bf0', c2: '#ffa8c5', fx: ['🐣', '🐰', '🥚', '🌷'] },
+    summer:       { name: '☀️ Summer',                  c1: '#0891d1', c2: '#fcd34d', fx: ['☀️', '🌊', '🍉', '🍦', '🏖️'] },
+    patriotic:    { name: '🇺🇸 Fourth of July',          c1: '#1d3a8a', c2: '#dc2626', fx: ['🇺🇸', '🎆', '⭐', '🎇'] }
+  };
+  function easterDate(y) { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da); }
+  function seasonFor(d) {
+    const m = d.getMonth() + 1, day = d.getDate(), md = m * 100 + day, es = easterDate(d.getFullYear()), days = (es - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5;
+    if (days >= -1 && days <= 14) return 'easter';
+    if (md >= 201 && md <= 214) return 'valentines';
+    if (md >= 701 && md <= 707) return 'patriotic';
+    if (md >= 1015 && md <= 1101) return 'halloween';
+    if (md >= 1102 && md <= 1130) return 'thanksgiving';
+    if (md >= 1201 || md <= 110) return 'christmas';
+    if (md <= 314) return 'winter';
+    if (md <= 531) return 'spring';
+    if (md <= 831) return 'summer';
+    return 'fall';
+  }
+  let themeNow = null;
+  function applyTheme() {
+    const key = S.theme && S.theme !== 'auto' && THEMES[S.theme] ? S.theme : seasonFor(new Date());
+    if (key === themeNow) return; themeNow = key; const t = THEMES[key], root = document.documentElement.style;
+    root.setProperty('--bg1', t.c1); root.setProperty('--bg2', t.c2);
+    const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.setAttribute('content', t.c1);
+    const fx = $('fx'); fx.innerHTML = ''; if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    t.fx.length && Array.from({ length: 16 }, (_, i) => {
+      const s = document.createElement('span'); s.textContent = t.fx[i % t.fx.length];
+      s.style.cssText = 'left:' + (Math.random() * 96) + '%;font-size:' + (22 + Math.random() * 30) + 'px;animation-duration:' + (11 + Math.random() * 12) + 's;animation-delay:-' + (Math.random() * 22) + 's';
+      fx.appendChild(s); });
+  }
+  const sel = $('themeSel'); sel.innerHTML = '<option value="auto">🗓️ Automatic (by the date)</option>' + Object.keys(THEMES).map(k => '<option value="' + k + '">' + THEMES[k].name + '</option>').join('');
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') applyTheme(); });
   // ---------- reel ----------
   const reel = $('reel'), ROWS = 9, rows = [];
   for (let i = 0; i < ROWS; i++) { const d = document.createElement('div'); d.className = 'row'; reel.appendChild(d); rows.push(d); }
@@ -297,7 +355,7 @@
     for (let k = 0; k < ROWS; k++) {
       const i = base - 4 + k, d = i - pos, el = rows[k];
       if (!n) { el.style.opacity = 0; continue; }
-      el.textContent = names[((i % n) + n) % n];
+      el.textContent = disp(names[((i % n) + n) % n]);
       const a = Math.abs(d), sc = Math.max(.4, 1 - a * .28);
       el.style.fontSize = (rh * .74) + 'px';
       el.style.lineHeight = rh + 'px'; el.style.height = rh + 'px';
@@ -314,7 +372,7 @@
     $('title').textContent = S.title;
     $('muteBtn').textContent = S.muted ? '🔇' : '🔊';
     $('visCount').textContent = S.visitors.length; $('cntDone').textContent = S.picked.length;
-    const chip = n => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = (S.visitors.includes(n) ? '⭐ ' : '') + n; return b; };
+    const chip = n => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = emo(n) + ' ' + n; return b; };
     const done = $('cupDone'); done.innerHTML = '';
     names.filter(n => S.picked.includes(n)).forEach(n => done.appendChild(chip(n)));
     const pk = $('pickChips'); pk.innerHTML = '';
@@ -324,8 +382,9 @@
     S.absent.slice().sort(cmp).forEach(n => adm.appendChild(chip(n)));
     if (!S.absent.length) adm.innerHTML = '<span class="note">No one is marked absent.</span>';
     $('cntAbsent').textContent = S.absent.length; $('reinsert').disabled = !S.absent.length;
-    $('undo').disabled = spinning || busy || !S.history.length;
-    $('spin').disabled = spinning || busy || !S.all.length;
+    $('undo').disabled = spinning || !S.history.length;
+    $('spin').disabled = spinning || !S.all.length;
+    $('spin').classList.toggle('flash', !spinning && $('win').style.display !== 'flex' && !!S.all.length);   // flashes only while waiting to be pushed
     if (!S.all.length) showMsg(S.absent.length ? 'Everyone is marked absent. Tap ⚙️ to re-insert them.' : 'Tap ⚙️ to add your kids’ names');
     else if (!left.length) showMsg('🎉 Everyone has had a turn! Tap SPIN to start a new round.');
     else showMsg('');
@@ -366,9 +425,8 @@
   const ease = t => 1 - Math.pow(1 - t, 3.2);
   function randInt(n) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; }
 
-  let busy = false;
   function spin() {
-    if (spinning || busy || !S.all.length) return;
+    if (spinning || !S.all.length) return;
     audio(); unlockSpeech();
     if (!remaining().length) { resetRound(true); }
     let pool = remaining();
@@ -381,6 +439,7 @@
     const start = pos, dur = 5500, t0 = performance.now();
     let lastRow = Math.round(start), lastTick = 0;
     spinning = true; showMsg(''); refresh();
+    setTimeout(() => drumroll(2.1), 3350);   // the drum roll builds as the wheel slows down
     setTimeout(() => { if (!S.muted && ac && ac.state !== 'running') toast('🔇 No sound. Turn up the volume and switch off the silent switch on the side, then tap SPIN again.'); }, 800);
     (function frame(now) {
       const t = Math.min(1, (now - t0) / dur);
@@ -393,22 +452,14 @@
     })(t0);
   }
 
-  let lastWinner = null, cdTimers = [], lastStyle = '';
+  let lastWinner = null, lastStyle = '';
   function land(winner) {
-    S.picked.push(winner); S.history.push(winner); S.last = winner; save(); refresh();
-    lastWinner = winner; $('winName').textContent = winner; $('winAbsent').style.display = S.visitors.includes(winner) ? 'none' : 'inline-block';
-    countdown(() => reveal(winner));
-  }
-  // 3... 2... 1... with a drum roll, then the big reveal (tap anywhere to skip the wait)
-  function countdown(done) {
-    busy = true; $('undo').disabled = true; $('spin').disabled = true;
-    const box = $('count'), num = $('countNum'); let finished = false;
-    const finish = () => { if (finished) return; finished = true; cdTimers.forEach(clearTimeout); cdTimers = []; box.style.display = 'none'; box.onclick = null; busy = false; done(); };
-    box.style.display = 'flex'; box.onclick = finish; drumroll(2.2);
-    [3, 2, 1].forEach((n, i) => cdTimers.push(setTimeout(() => { num.textContent = n; num.style.animation = 'none'; void num.offsetWidth; num.style.animation = ''; tone(150 - i * 12, .22, 'sine', .4); }, i * 720)));
-    cdTimers.push(setTimeout(finish, 2200));
+    S.picked.push(winner); S.history.push(winner); S.last = winner; save();
+    lastWinner = winner; $('winAbsent').style.display = S.visitors.includes(winner) ? 'none' : 'inline-block';
+    reveal(winner);
   }
   function reveal(winner) {
+    const e = emo(winner); $('winName').innerHTML = ''; [e, ' ' + winner + ' ', e].forEach((t, i) => { const sp = document.createElement('span'); sp.textContent = t; if (i !== 1) sp.className = 'emo'; $('winName').appendChild(sp); });
     $('win').style.display = 'flex'; boom();
     const styles = ['confetti', 'balloons', 'fireworks', 'stars'].filter(x => x !== lastStyle); lastStyle = styles[randInt(styles.length)];
     celebrate(lastStyle); refresh();
@@ -462,6 +513,7 @@
     } else return;
     save(); refresh();
   }
+  $('newEmojis').onclick = () => { S.emo = {}; save(); refresh(); $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).sort(cmp).map(n => n + ' ' + emo(n)).join('\n'); };
   $('visPlus').onclick = () => setVisitors(1);
   $('visMinus').onclick = () => setVisitors(-1);
   $('muteBtn').onclick = () => { S.muted = !S.muted; save(); refresh(); if (!S.muted) { tone(660, .12, 'triangle', .2); tone(880, .18, 'triangle', .2, .12); } };   // a little beep so you can hear that sound is on
@@ -469,12 +521,15 @@
   // ---------- editor ----------
   $('editBtn').onclick = () => {
     if (spinning) return;
-    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('speakChk').checked = S.speak !== false; $('titleIn').value = S.title; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).sort(cmp).join('\n'); $('edit').style.display = 'flex';
+    $('saveInfo').textContent = !storageOk ? '⚠️ This browser is NOT saving anything (private browsing or blocked storage). Names and picks will reset when you close it.' : (S.savedAt ? '💾 Saved on this device. Last saved ' + new Date(S.savedAt).toLocaleString() + '.' : '💾 Nothing saved on this device yet.'); $('speakChk').checked = S.speak !== false; $('titleIn').value = S.title; $('themeSel').value = S.theme || 'auto'; $('namesIn').value = S.all.filter(n => !S.visitors.includes(n)).concat(S.absent).sort(cmp).map(n => n + ' ' + emo(n)).join('\n'); $('edit').style.display = 'flex';
   };
   $('saveEdit').onclick = () => {
     const seen = new Set(), list = [];
-    $('namesIn').value.split('\n').map(s => s.trim()).filter(Boolean).map(n => n === n.toLowerCase() ? n.replace(/(^|[\s'-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase()) : n).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); list.push(n); } });
+    const EM = /\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*/u, typed = {};
+    $('namesIn').value.split('\n').map(s => { const m = s.match(EM); let nm = s.replace(new RegExp(EM.source, 'gu'), '').replace(/\uFE0F/g, '').trim(); if (m && nm) typed[nm.toLowerCase()] = m[0]; return nm; }).filter(Boolean).map(n => n === n.toLowerCase() ? n.replace(/(^|[\s'-])(\p{L})/gu, (m, p, c) => p + c.toUpperCase()) : n).forEach(n => { if (!seen.has(n.toLowerCase())) { seen.add(n.toLowerCase()); list.push(n); } });
     list.sort(cmp);
+    list.forEach(n => { const e = typed[n.toLowerCase()]; if (e) S.emo[n] = e; });
+    S.theme = $('themeSel').value; applyTheme();
     S.speak = $('speakChk').checked; S.title = $('titleIn').value.trim() || "Who's Our Helper? 🎤";
     S.absent = S.absent.filter(n => list.includes(n));
     S.all = list.filter(n => !S.absent.includes(n)).concat(S.visitors.filter(v => !list.includes(v)));
@@ -527,7 +582,7 @@
   function stopConfetti() { cancelAnimationFrame(raf); fwT.forEach(clearTimeout); fwT = []; fwPending = 0; parts = []; cx.clearRect(0, 0, cv.width, cv.height); }
 
   addEventListener('resize', draw);
-  refresh();
+  applyTheme(); refresh();
   if (!storageOk) toast('⚠️ This browser can’t save — names will reset when closed. Open the link in regular (non-private) Safari.');
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
