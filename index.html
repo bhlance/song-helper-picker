@@ -346,7 +346,7 @@
       s.style.cssText = 'left:' + (Math.random() * 96) + '%;font-size:' + (22 + Math.random() * 30) + 'px;animation-duration:' + (11 + Math.random() * 12) + 's;animation-delay:-' + (Math.random() * 22) + 's';
       fx.appendChild(s); });
   }
-  const sel = $('themeSel'); sel.innerHTML = '<option value="auto">🗓️ Automatic (by the date)</option>' + Object.keys(THEMES).map(k => '<option value="' + k + '">' + THEMES[k].name + '</option>').join('');
+  const sel = $('themeSel'); sel.innerHTML = '<option value="auto">🗓️ Automatic (by the date)</option>' + ['newyear', 'winter', 'valentines', 'stpatricks', 'spring', 'easter', 'summer', 'patriotic', 'fall', 'halloween', 'thanksgiving', 'christmas', 'original'].map(k => '<option value="' + k + '">' + THEMES[k].name + '</option>').join('');
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') applyTheme(); });
   // ---------- reel ----------
   const reel = $('reel'), ROWS = 9, rows = [];
