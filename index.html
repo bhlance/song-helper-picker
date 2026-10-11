@@ -308,6 +308,7 @@
     fall:         { name: '🍂 Fall',                    c1: '#c2410c', c2: '#f59f0b', fx: ['🍂', '🍁', '🍃', '🌰'] },
     halloween:    { name: '🎃 Halloween',               c1: '#3b1d6e', c2: '#ff7a00', fx: ['🎃', '👻', '🦇', '🍬', '🕸️'] },
     thanksgiving: { name: '🦃 Thanksgiving',            c1: '#7c3f12', c2: '#d9822b', fx: ['🦃', '🥧', '🌽', '🍂'] },
+    newyear:      { name: '🎆 New Year’s',             c1: '#1b2a6b', c2: '#f0b429', fx: ['🎆', '🎇', '🎉', '🎊', '⭐', '✨', '🎈', '🥳'] },
     christmas:    { name: '🎄 Christmas',               c1: '#b3122e', c2: '#0f7a3d', fx: ['🎄', '⛄', '❄️', '⭐', '🎁'] },
     winter:       { name: '❄️ Winter',                  c1: '#2b5fb0', c2: '#7cc0f0', fx: ['❄️', '⛄', '🧣', '❄️'] },
     stpatricks:   { name: '☘️ St. Patrick’s Day',       c1: '#0b7a3b', c2: '#7bd66f', fx: ['☘️', '🍀', '🌈', '🪙', '🎩'] },
@@ -326,7 +327,8 @@
     if (md >= 701 && md <= 707) return 'patriotic';
     if (md >= 1015 && md <= 1101) return 'halloween';
     if (md >= 1102 && md <= 1130) return 'thanksgiving';
-    if (md >= 1201 || md <= 110) return 'christmas';
+    if (md >= 1227 || md <= 103) return 'newyear';   // December 27 through January 3
+    if (md >= 1201) return 'christmas';
     if (md <= 314) return 'winter';
     if (md <= 531) return 'spring';
     if (md <= 831) return 'summer';
