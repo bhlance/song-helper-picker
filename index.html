@@ -378,7 +378,7 @@
     $('visCount').textContent = S.visitors.length; $('cntDone').textContent = S.picked.length;
     const chip = n => { const b = document.createElement('span'); b.className = 'chip'; b.textContent = emo(n) + ' ' + n; return b; };
     const done = $('cupDone'); done.innerHTML = '';
-    names.filter(n => S.picked.includes(n)).forEach(n => done.appendChild(chip(n)));
+    S.picked.filter(n => S.all.includes(n)).forEach(n => done.appendChild(chip(n)));   // main screen: in the order they were picked
     const pk = $('pickChips'); pk.innerHTML = '';
     names.forEach(n => { const b = chip(n); b.className = 'chip' + (S.picked.includes(n) ? ' done' : ''); b.style.cursor = 'pointer'; b.onclick = () => toggle(n); pk.appendChild(b); });
     $('cntLeft').textContent = left.length;
@@ -443,7 +443,6 @@
     const start = pos, dur = 5500, t0 = performance.now();
     let lastRow = Math.round(start), lastTick = 0;
     spinning = true; showMsg(''); refresh();
-    setTimeout(() => drumroll(2.1), 3350);   // the drum roll builds as the wheel slows down
     setTimeout(() => { if (!S.muted && ac && ac.state !== 'running') toast('🔇 No sound. Turn up the volume and switch off the silent switch on the side, then tap SPIN again.'); }, 800);
     (function frame(now) {
       const t = Math.min(1, (now - t0) / dur);
