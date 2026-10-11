@@ -42,24 +42,20 @@
   #stage { position: relative; flex: 1; min-height: 240px; display: flex; align-items: stretch; }
   #reel {
     position: relative; flex: 1; overflow: hidden; border-radius: 28px;
-    background: var(--card); box-shadow: var(--shadow);
+    background: rgba(255,253,247,.30); box-shadow: var(--shadow);   /* see-through, so the falling pictures show */
     -webkit-mask-image: none;
   }
-  #reel::before, #reel::after {
-    content: ""; position: absolute; left: 0; right: 0; height: 22%; z-index: 2; pointer-events: none;
-  }
-  #reel::before { top: 0;    background: linear-gradient(var(--card) 10%, rgba(255,253,247,0)); }
-  #reel::after  { bottom: 0; background: linear-gradient(rgba(255,253,247,0), var(--card) 90%); }
   #band {
     position: absolute; left: 0; right: 0; top: 50%; height: 29.4%; transform: translateY(-50%);
-    background: rgba(255,201,60,.35); border-top: 4px solid var(--gold); border-bottom: 4px solid var(--gold);
+    background: rgba(255,244,196,.96); border-top: 4px solid var(--gold); border-bottom: 4px solid var(--gold);   /* only the picked-name stripe is solid */
     z-index: 1;
   }
   .arrow { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; font-size: clamp(28px, 5vw, 54px); color: #e8445f; text-shadow: 0 2px 0 rgba(0,0,0,.12); }
   .arrow.l { left: 14px; } .arrow.r { right: 14px; }
   .row {
     position: absolute; left: 0; right: 0; top: 0; text-align: center; font-weight: 800; white-space: nowrap;
-    overflow: hidden; text-overflow: ellipsis; padding: 0 70px; will-change: transform, opacity;
+    overflow: hidden; text-overflow: ellipsis; padding: 0 70px; will-change: transform, opacity; z-index: 2;
+    text-shadow: 0 0 8px rgba(255,255,255,.9), 0 0 2px rgba(255,255,255,.9);
   }
   #msg {
     position: absolute; inset: 0; z-index: 4; display: none; align-items: center; justify-content: center; text-align: center;
@@ -365,7 +361,7 @@
       el.style.lineHeight = rh + 'px'; el.style.height = rh + 'px';
       el.style.transform = `translateY(${mid + d * rh - rh / 2}px) scale(${sc})`;
       el.style.opacity = Math.max(0, 1 - a * .42);
-      el.style.color = a < .5 ? '#2b1d5c' : '#7a6fa8';
+      el.style.color = a < .5 ? '#2b1d5c' : '#3f2f7a';
     }
   }
   const showMsg = t => { const m = $('msg'); if (t) { m.textContent = t; m.style.display = 'flex'; } else m.style.display = 'none'; };
