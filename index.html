@@ -310,6 +310,7 @@
     thanksgiving: { name: '🦃 Thanksgiving',            c1: '#7c3f12', c2: '#d9822b', fx: ['🦃', '🥧', '🌽', '🍂'] },
     christmas:    { name: '🎄 Christmas',               c1: '#b3122e', c2: '#0f7a3d', fx: ['🎄', '⛄', '❄️', '⭐', '🎁'] },
     winter:       { name: '❄️ Winter',                  c1: '#2b5fb0', c2: '#7cc0f0', fx: ['❄️', '⛄', '🧣', '❄️'] },
+    stpatricks:   { name: '☘️ St. Patrick’s Day',       c1: '#0b7a3b', c2: '#7bd66f', fx: ['☘️', '🍀', '🌈', '🪙', '🎩'] },
     valentines:   { name: '💖 Valentine’s Day',         c1: '#d81b60', c2: '#ff8fb1', fx: ['❤️', '💖', '💝', '💌'] },
     spring:       { name: '🌷 Spring',                  c1: '#2f9e44', c2: '#ffd43b', fx: ['🌸', '🌷', '🦋', '🐝', '🌼'] },
     easter:       { name: '🐣 Easter',                  c1: '#8e6bf0', c2: '#ffa8c5', fx: ['🐣', '🐰', '🥚', '🌷'] },
@@ -319,6 +320,7 @@
   function easterDate(y) { const a = y % 19, b = Math.floor(y / 100), c = y % 100, d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30, i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451), mo = Math.floor((h + l - 7 * m + 114) / 31), da = ((h + l - 7 * m + 114) % 31) + 1; return new Date(y, mo - 1, da); }
   function seasonFor(d) {
     const m = d.getMonth() + 1, day = d.getDate(), md = m * 100 + day, es = easterDate(d.getFullYear()), days = (es - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 864e5;
+    if (md >= 310 && md <= 317) return 'stpatricks';   // the week before St. Patrick's Day, and the day itself
     if (days >= -1 && days <= 14) return 'easter';
     if (md >= 201 && md <= 214) return 'valentines';
     if (md >= 701 && md <= 707) return 'patriotic';
